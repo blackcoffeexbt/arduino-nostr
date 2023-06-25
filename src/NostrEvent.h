@@ -24,6 +24,7 @@ class NostrEvent
 {
   public:
     NostrEvent();
+    String getNoteId(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content);
     String getNote(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content);
     String getEncryptedDm(char const *privateKeyHex, char const *pubKeyHex, char const *recipientPubKeyHex, unsigned long timestamp, String content);
     String decryptDm(const char *privateKeyHex, String serialisedJson);

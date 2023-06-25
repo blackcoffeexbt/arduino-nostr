@@ -48,16 +48,7 @@ void NostrEvent::setLogging(bool loggingEnabled) {
   _isLoggingEnabled = loggingEnabled;
 }
 
-/**
- * @brief Get a serialised string for a nostr note
- * 
- * @param privateKeyHex 
- * @param pubKeyHex 
- * @param timestamp 
- * @param content 
- * @return String 
- */
-String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content) {
+String NostrEvent::getNoteId(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content) {
     StaticJsonDocument<200> doc;
     JsonArray data = doc.createNestedArray("data");
     data.add(0);
@@ -80,7 +71,21 @@ String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, uns
     hashLen = sha256(message, hash);
     String msgHash = toHex(hash, hashLen);
     _logToSerialWithTitle("SHA-256: ", msgHash);
+    return msgHash;
+}
 
+/**
+ * @brief Get a serialised string for a nostr note
+ * 
+ * @param privateKeyHex 
+ * @param pubKeyHex 
+ * @param timestamp 
+ * @param content 
+ * @return String 
+ */
+String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content) {
+
+    String noteId = getNoteId(privateKeyHex, pubKeyHex, timestamp, content);
     // Create the private key object
     int byteSize =  32;
     byte privateKeyBytes[byteSize];
@@ -89,7 +94,7 @@ String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, uns
 
     // Generate the schnorr sig of the messageHash
     byte messageBytes[byteSize];
-    fromHex(msgHash, messageBytes, byteSize);
+    fromHex(noteId, messageBytes, byteSize);
     SchnorrSignature signature = privateKey.schnorr_sign(messageBytes);
     String signatureHex = String(signature);
     _logToSerialWithTitle("Schnorr sig is: ", signatureHex);
@@ -103,9 +108,11 @@ String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, uns
         Serial.println("Something went wrong, signature is invalid");
     }
 
+    StaticJsonDocument<200> doc;
+
     // Generate the JSON object ready for broadcasting
     DynamicJsonDocument fullEvent(1024);
-    fullEvent["id"] = msgHash;
+    fullEvent["id"] = noteId;
     fullEvent["pubkey"] = pubKeyHex;
     fullEvent["created_at"] = timestamp;
     fullEvent["kind"] = 1;
