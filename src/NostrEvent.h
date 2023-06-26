@@ -29,6 +29,10 @@ class NostrEvent
     String getEncryptedDm(char const *privateKeyHex, char const *pubKeyHex, char const *recipientPubKeyHex, unsigned long timestamp, String content);
     String decryptDm(const char *privateKeyHex, String serialisedJson);
     void setLogging(bool loggingEnabled);
+    size_t estimateNoteIdJsonDocumentSize(const char* pubKeyHex, const String& content);
+    size_t estimateFullNoteJsonDocumentSize(const String& noteId, const String& pubKeyHex, 
+                                const String& content, const String& signature);
+    SchnorrSignature getSignature(char const *privateKeyHex, String noteId);
   private:
     bool _isLoggingEnabled;
     String _decryptData(byte key[32], byte iv[16], String messageHex);

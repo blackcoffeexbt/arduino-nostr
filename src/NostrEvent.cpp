@@ -49,7 +49,12 @@ void NostrEvent::setLogging(bool loggingEnabled) {
 }
 
 String NostrEvent::getNoteId(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content) {
-    StaticJsonDocument<200> doc;
+    size_t docSize = estimateNoteIdJsonDocumentSize(pubKeyHex, content);
+    
+    char buffer[50]; // Create a buffer to hold the output
+    sprintf(buffer, "Size of JsonDocument: %zu", docSize); // %zu is the format specifier for size_t
+
+    DynamicJsonDocument doc(docSize);
     JsonArray data = doc.createNestedArray("data");
     data.add(0);
     data.add(pubKeyHex);
@@ -86,36 +91,17 @@ String NostrEvent::getNoteId(char const *privateKeyHex, char const *pubKeyHex, u
 String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content) {
 
     String noteId = getNoteId(privateKeyHex, pubKeyHex, timestamp, content);
-    // Create the private key object
-    int byteSize =  32;
-    byte privateKeyBytes[byteSize];
-    fromHex(privateKeyHex, privateKeyBytes, byteSize);
-    PrivateKey privateKey(privateKeyBytes);
 
-    // Generate the schnorr sig of the messageHash
-    byte messageBytes[byteSize];
-    fromHex(noteId, messageBytes, byteSize);
-    SchnorrSignature signature = privateKey.schnorr_sign(messageBytes);
-    String signatureHex = String(signature);
-    _logToSerialWithTitle("Schnorr sig is: ", signatureHex);
-
-    // Device the public key and verify the schnorr sig is valid
-    PublicKey pub = privateKey.publicKey();
-
-    if(pub.schnorr_verify(signature, messageBytes)) {
-        Serial.println("All good, signature is valid");
-    } else {
-        Serial.println("Something went wrong, signature is invalid");
-    }
-
-    StaticJsonDocument<200> doc;
+    SchnorrSignature signature = getSignature(privateKeyHex, noteId);
 
     // Generate the JSON object ready for broadcasting
-    DynamicJsonDocument fullEvent(1024);
+    size_t docSize = estimateFullNoteJsonDocumentSize(noteId, pubKeyHex, content, signature);
+    DynamicJsonDocument fullEvent(docSize);
     fullEvent["id"] = noteId;
     fullEvent["pubkey"] = pubKeyHex;
     fullEvent["created_at"] = timestamp;
     fullEvent["kind"] = 1;
+    StaticJsonDocument<200> doc;
     fullEvent["tags"] = doc.createNestedArray("test");
     fullEvent["content"] = content;
     fullEvent["sig"] = signature;
@@ -379,7 +365,10 @@ String NostrEvent::_getSerialisedEncryptedDmArray(char const *pubKeyHex, char co
     _logToSerialWithTitle("serialisedTagsArray is: ", serialisedTagsArray);
     deserializeJson(tagsDoc, serialisedTagsArray);
 
+    // size_t docSize = estimateNoteIdJsonDocumentSize(pubKeyHex, encryptedMessageWithIv);
     StaticJsonDocument<2000> doc;
+
+
 
     JsonArray data = doc.createNestedArray("data");
 
@@ -397,4 +386,71 @@ String NostrEvent::_getSerialisedEncryptedDmArray(char const *pubKeyHex, char co
 
     doc.clear();
     return message;
+}
+
+size_t NostrEvent::estimateNoteIdJsonDocumentSize(const char* pubKeyHex, const String& content) {
+    // calculate sizes for the individual elements
+    size_t sizeOfPubKeyHex = strlen(pubKeyHex) + 1; // +1 for null terminator
+    size_t sizeOfContent = content.length() + 1; // +1 for null terminator
+
+    // estimate the size of the document
+    size_t estimatedSize =
+        JSON_ARRAY_SIZE(6) + // main array with 6 elements
+        JSON_ARRAY_SIZE(0) + // nested empty array
+        2 * JSON_OBJECT_SIZE(1) + // 2 integers/longs
+        JSON_STRING_SIZE(sizeOfPubKeyHex) + // size of pubKeyHex
+        JSON_STRING_SIZE(sizeOfContent); // size of content
+
+    // add some extra space to be safe
+    estimatedSize += 256; 
+
+    return estimatedSize;
+}
+
+size_t NostrEvent::estimateFullNoteJsonDocumentSize(const String& noteId, const String& pubKeyHex, 
+                                const String& content, const String& signature) {
+    // calculate sizes for the individual elements
+    size_t sizeOfNoteId = noteId.length() + 1; // +1 for null terminator
+    size_t sizeOfPubKeyHex = pubKeyHex.length() + 1; 
+    size_t sizeOfContent = content.length() + 1; 
+    size_t sizeOfSignature = signature.length() + 1;
+
+    // estimate the size of the document
+    size_t estimatedSize =
+        JSON_OBJECT_SIZE(7) + // main object with 7 elements
+        JSON_ARRAY_SIZE(1) + // nested array with 1 element
+        JSON_STRING_SIZE(sizeOfNoteId) + 
+        JSON_STRING_SIZE(sizeOfPubKeyHex) + 
+        JSON_STRING_SIZE(sizeOfContent) +
+        JSON_STRING_SIZE(sizeOfSignature) + 
+        JSON_STRING_SIZE(10) + // 'created_at' - Long value as string
+        JSON_STRING_SIZE(1); // 'kind' - Integer value as string
+
+    // add some extra space to be safe
+    estimatedSize += 256;
+
+    return estimatedSize;
+}
+
+SchnorrSignature NostrEvent::getSignature(char const *privateKeyHex, String noteId) {
+        // Create the private key object
+    int byteSize =  32;
+    byte privateKeyBytes[byteSize];
+    fromHex(privateKeyHex, privateKeyBytes, byteSize);
+    PrivateKey privateKey(privateKeyBytes);
+
+    // Generate the schnorr sig of the messageHash
+    byte messageBytes[byteSize];
+    fromHex(noteId, messageBytes, byteSize);
+    SchnorrSignature signature = privateKey.schnorr_sign(messageBytes);
+
+    // Device the public key and verify the schnorr sig is valid
+    PublicKey pub = privateKey.publicKey();
+
+    if(pub.schnorr_verify(signature, messageBytes)) {
+        Serial.println("All good, signature is valid");
+    } else {
+        Serial.println("Something went wrong, signature is invalid");
+    }
+    return signature;
 }
