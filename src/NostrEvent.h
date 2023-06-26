@@ -33,6 +33,7 @@ class NostrEvent
     size_t estimateFullNoteJsonDocumentSize(const String& noteId, const String& pubKeyHex, 
                                 const String& content, const String& signature);
     SchnorrSignature getSignature(char const *privateKeyHex, String noteId);
+    std::array<uint8_t, 16> getRandomIv();
   private:
     bool _isLoggingEnabled;
     String _decryptData(byte key[32], byte iv[16], String messageHex);

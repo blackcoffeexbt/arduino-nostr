@@ -216,20 +216,15 @@ String NostrEvent::getEncryptedDm(char const *privateKeyHex, char const *pubKeyH
     _logToSerialWithTitle("sharedPointXHex is", sharedPointXHex);
 
     // Create the initialization vector
-    esp_wifi_start();
-    uint8_t iv[16];
-    esp_random() % 256;
-    for (int i = 0; i < sizeof(iv); i++) {
-        iv[i] = esp_random() % 256;
-    }
+    std::array<uint8_t, 16> iv = NostrEvent::getRandomIv();
 
-    String ivHex = toHex(iv, 16);
+    String ivHex = toHex(iv.data(), 16);
     _logToSerialWithTitle("ivHex is", ivHex);
 
     String ivBase64 = hexToBase64(ivHex);
     _logToSerialWithTitle("ivBase64 is", ivBase64);
 
-    String encryptedMessageHex = _encryptData(sharedPointX, iv, content);
+    String encryptedMessageHex = _encryptData(sharedPointX, iv.data(), content);
     _logToSerialWithTitle("encryptedMessage is", encryptedMessageHex);
 
     // divide the length of the hex string 2 to get the size of the byte array, since each byte consists of 2 hexadecimal characters.
@@ -453,4 +448,21 @@ SchnorrSignature NostrEvent::getSignature(char const *privateKeyHex, String note
         Serial.println("Something went wrong, signature is invalid");
     }
     return signature;
+}
+
+std::array<uint8_t, 16> NostrEvent::getRandomIv() {
+#ifdef UNIT_TEST
+    // If unit testing generate a static iv
+    std::array<uint8_t, 16> iv = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+                                  0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
+                                  0x0C, 0x0D, 0x0E, 0x0F};
+    return iv;
+#else
+    esp_wifi_start();
+    std::array<uint8_t, 16> iv;
+    for (auto& i : iv) {
+        i = esp_random() % 256;
+    }
+    return iv;
+#endif
 }
