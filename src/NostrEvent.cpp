@@ -218,12 +218,6 @@ String NostrEvent::getEncryptedDm(char const *privateKeyHex, char const *pubKeyH
     // Create the initialization vector
     std::array<uint8_t, 16> iv = NostrEvent::getRandomIv();
 
-    String ivHex = toHex(iv.data(), 16);
-    _logToSerialWithTitle("ivHex is", ivHex);
-
-    String ivBase64 = hexToBase64(ivHex);
-    _logToSerialWithTitle("ivBase64 is", ivBase64);
-
     String encryptedMessageHex = _encryptData(sharedPointX, iv.data(), content);
     _logToSerialWithTitle("encryptedMessage is", encryptedMessageHex);
 
@@ -234,6 +228,11 @@ String NostrEvent::getEncryptedDm(char const *privateKeyHex, char const *pubKeyH
 
     String encryptedMessageBase64 = hexToBase64(encryptedMessageHex);
     _logToSerialWithTitle("encryptedMessageBase64 is", encryptedMessageBase64);
+
+    String ivHex = toHex(iv.data(), 16);
+    _logToSerialWithTitle("ivHex is", ivHex);
+    String ivBase64 = hexToBase64(ivHex);
+    _logToSerialWithTitle("ivBase64 is", ivBase64);
 
     encryptedMessageBase64 += "?iv=" + ivBase64;
 
