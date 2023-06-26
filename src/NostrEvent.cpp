@@ -66,6 +66,7 @@ String NostrEvent::getNoteId(char const *privateKeyHex, char const *pubKeyHex, u
     // stringify event to message var
     String message;
     serializeJson(doc["data"], message);
+    doc.clear();
     _logToSerialWithTitle("message is: ", String(message));
 
     // sha256 of message converted to hex, assign to msghash
@@ -109,6 +110,8 @@ String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, uns
     // Serialize the array to JSON
     String json;
     serializeJson(fullEvent, json);
+    fullEvent.clear();
+    doc.clear();
 
     String serialisedEventData = "[\"EVENT\"," + json + "]";
     // Print the JSON to the serial monitor
@@ -316,14 +319,15 @@ String NostrEvent::_getSerialisedEncryptedDmObject(const char *pubKeyHex, const 
     // compute the required size
     const size_t CAPACITY = JSON_ARRAY_SIZE(6);
     // allocate the memory for the document
-    StaticJsonDocument<1000> tagsDoc;
+    StaticJsonDocument<200> tagsDoc;
     // parse a JSON array
     String serialisedTagsArray = "[[\"p\",\"" + String(recipientPubKeyHex) + "\"]]";
     _logToSerialWithTitle("serialisedTagsArray is: ", serialisedTagsArray);
     deserializeJson(tagsDoc, serialisedTagsArray);
 
     // Generate the JSON object ready for broadcasting
-    DynamicJsonDocument fullEvent(2000);
+    size_t fullEventSize = estimateFullNoteJsonDocumentSize(msgHash, pubKeyHex, encryptedMessageWithIv, schnorrSig);
+    DynamicJsonDocument fullEvent(fullEventSize);
     fullEvent["id"] = msgHash;
     fullEvent["pubkey"] = pubKeyHex;
     fullEvent["created_at"] = timestamp;
@@ -335,6 +339,8 @@ String NostrEvent::_getSerialisedEncryptedDmObject(const char *pubKeyHex, const 
     // Serialize the array to JSON
     String serialisedObject;
     serializeJson(fullEvent, serialisedObject);
+    fullEvent.clear();
+    tagsDoc.clear();
 
     String serialisedEventObject = "[\"EVENT\"," + serialisedObject + "]";
     return serialisedEventObject;
@@ -353,16 +359,14 @@ String NostrEvent::_getSerialisedEncryptedDmArray(char const *pubKeyHex, char co
     // compute the required size
     const size_t CAPACITY = JSON_ARRAY_SIZE(6);
     // allocate the memory for the document
-    StaticJsonDocument<1000> tagsDoc;
+    StaticJsonDocument<200> tagsDoc;
     // parse a JSON array
     String serialisedTagsArray = "[[\"p\",\"" + String(recipientPubKeyHex) + "\"]]";
     _logToSerialWithTitle("serialisedTagsArray is: ", serialisedTagsArray);
     deserializeJson(tagsDoc, serialisedTagsArray);
 
-    // size_t docSize = estimateNoteIdJsonDocumentSize(pubKeyHex, encryptedMessageWithIv);
-    StaticJsonDocument<2000> doc;
-
-
+    size_t docSize = estimateNoteIdJsonDocumentSize(pubKeyHex, encryptedMessageWithIv);
+    DynamicJsonDocument doc(docSize);
 
     JsonArray data = doc.createNestedArray("data");
 
@@ -379,6 +383,8 @@ String NostrEvent::_getSerialisedEncryptedDmArray(char const *pubKeyHex, char co
     _logToSerialWithTitle("message is: ", String(message));
 
     doc.clear();
+    tagsDoc.clear();
+
     return message;
 }
 
