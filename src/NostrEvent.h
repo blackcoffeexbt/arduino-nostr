@@ -18,18 +18,19 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <esp_system.h>
+#include <vector>
 #include <esp_random.h>
 
 class NostrEvent
 {
   public:
     NostrEvent();
-    String getNoteId(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content);
-    String getNote(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content);
+    String getNoteId(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content, const std::vector<String>& tags);
+    String getNote(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content, const std::vector<String>& tags);
     String getEncryptedDm(char const *privateKeyHex, char const *pubKeyHex, char const *recipientPubKeyHex, unsigned long timestamp, String content);
     String decryptDm(const char *privateKeyHex, String serialisedJson);
     void setLogging(bool loggingEnabled);
-    size_t estimateNoteIdJsonDocumentSize(const char* pubKeyHex, const String& content);
+    size_t estimateNoteIdJsonDocumentSize(const char* pubKeyHex, const String& content, const std::vector<String>& tags);
     size_t estimateFullNoteJsonDocumentSize(const String& noteId, const String& pubKeyHex, 
                                 const String& content, const String& signature);
     SchnorrSignature getSignature(char const *privateKeyHex, String noteId);
