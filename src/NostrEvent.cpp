@@ -63,8 +63,7 @@ String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, uns
     data.add(0);
     data.add(pubKeyHex);
     data.add(timestamp);
-    data.add(1);
-    // data.add(doc.createNestedArray("tags"));
+    data.add(kind);
     data.add(tags.isNull() ? doc.createNestedArray("tags") : tags);
     data.add(content);
 
@@ -110,8 +109,7 @@ String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, uns
     fullEvent["id"] = msgHash;
     fullEvent["pubkey"] = pubKeyHex;
     fullEvent["created_at"] = timestamp;
-    fullEvent["kind"] = 1;
-    // fullEvent["tags"] = doc.createNestedArray("test");
+    fullEvent["kind"] = kind;
     fullEvent["tags"] = tags.isNull() ? doc.createNestedArray("tags") : tags;
     fullEvent["content"] = content;
     fullEvent["sig"] = signature;
