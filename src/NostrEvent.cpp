@@ -57,14 +57,15 @@ void NostrEvent::setLogging(bool loggingEnabled) {
  * @param content 
  * @return String 
  */
-String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content) {
+String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, unsigned long timestamp, String content, uint16_t kind, JsonArray tags) {
     StaticJsonDocument<2048> doc;
     JsonArray data = doc.createNestedArray("data");
     data.add(0);
     data.add(pubKeyHex);
     data.add(timestamp);
     data.add(1);
-    data.add(doc.createNestedArray("tags"));
+    // data.add(doc.createNestedArray("tags"));
+    data.add(tags.isNull() ? doc.createNestedArray("tags") : tags);
     data.add(content);
 
     // stringify event to message var
@@ -110,7 +111,8 @@ String NostrEvent::getNote(char const *privateKeyHex, char const *pubKeyHex, uns
     fullEvent["pubkey"] = pubKeyHex;
     fullEvent["created_at"] = timestamp;
     fullEvent["kind"] = 1;
-    fullEvent["tags"] = doc.createNestedArray("test");
+    // fullEvent["tags"] = doc.createNestedArray("test");
+    fullEvent["tags"] = tags.isNull() ? doc.createNestedArray("tags") : tags;
     fullEvent["content"] = content;
     fullEvent["sig"] = signature;
 
